@@ -1,0 +1,41 @@
+version: '3'
+
+networks:
+  service_network:
+    external:
+      name: service_network
+
+volumes:
+  db_vol:
+
+services:
+  postgres:
+    image: postgres:12
+    volumes:
+      - db_vol:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_HOST=localhost
+      - POSTGRES_PASSWORD=Password1234!
+      - POSTGRES_DB=db
+    ports:
+      - "8441:5432"
+    networks:
+      - service_network
+    restart: always
+
+  web:
+    build: .
+    command: uwsgi --http 0.0.0.0:5000 --module service_api.wsgi:app
+    volumes:
+      - ./service_api:/code/service_api
+      - ./migrations:/code/migrations/
+    env_file:
+      - ./.flaskenv
+    environment:
+      - DATABASE_URI=postgres://postgres:Password1234!@postgres:5432/db
+    ports:
+      - "5001:5000"
+    networks:
+      - service_network
+    depends_on:
+      - postgres
